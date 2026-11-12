@@ -2,7 +2,7 @@
 
 # by @mdrndesigns
 
-Parametric storage tray + lid. Sliders in the browser, CadQuery on the server.
+Parametric storage tray + lid. Sliders in the browser, CadQuery on the server. By @mdrndesigns.
 
 ## Run
 
