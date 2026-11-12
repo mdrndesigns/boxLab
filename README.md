@@ -1,5 +1,7 @@
 # BOXLAB
 
+# by @mdrndesigns
+
 Parametric storage tray + lid. Sliders in the browser, CadQuery on the server.
 
 ## Run
