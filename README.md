@@ -40,3 +40,4 @@ Lid clearance 0.25 mm per face - the mating-parts value for FDM.
 
 Geometry lives in model.py. Adding a parameter takes two edits:
 add it to DEFAULTS, then add a row to CONTROLS in index.html.
+one
