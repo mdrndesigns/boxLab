@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BOXLAB</title>
+<style>
+  :root{
+    --blue:#0000FF;
+    --black:#000000;
+    --white:#FFFFFF;
+    --hair:0.5px solid #000;
+    --rule:1px solid #000;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    background:var(--white); color:var(--black);
+    font-size:11px; line-height:1.35;
+    -webkit-font-smoothing:antialiased;
+    display:grid; grid-template-columns:300px 1fr; height:100vh;
+  }
+
+  /* ---------- control column ---------- */
+  #panel{border-right:var(--rule); overflow-y:auto; display:flex; flex-direction:column}
+  #brand{
+    padding:14px 16px 12px; border-bottom:var(--rule);
+    display:flex; justify-content:space-between; align-items:baseline;
+  }
+  #brand h1{font-size:15px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase}
+  #brand span{font-size:9px; letter-spacing:0.18em; text-transform:uppercase}
+
+  .group{border-bottom:var(--rule); padding:12px 16px 14px}
+  .group > h2{
+    font-size:9px; font-weight:700; letter-spacing:0.2em;
+    text-transform:uppercase; margin-bottom:10px;
+  }
+
+  .ctl{margin-bottom:11px}
+  .ctl:last-child{margin-bottom:0}
+  .ctl .row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px}
+  .ctl label{font-size:10px; letter-spacing:0.06em; text-transform:uppercase}
+  .ctl output{
+    font-size:10px; font-weight:700; font-variant-numeric:tabular-nums;
+    color:var(--blue);
+  }
+
+  input[type=range]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:11px; background:transparent; display:block; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:1px; background:var(--black);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:9px; height:9px; margin-top:-4px;
+    background:var(--blue); border:none; border-radius:0;
+  }
+  input[type=range]::-moz-range-track{height:1px; background:var(--black)}
+  input[type=range]::-moz-range-thumb{
+    width:9px; height:9px; background:var(--blue); border:none; border-radius:0;
+  }
+
+  .toggle{display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none}
+  .toggle .box{width:11px; height:11px; border:1px solid var(--black); flex:0 0 auto}
+  .toggle input{display:none}
+  .toggle input:checked + .box{background:var(--blue); border-color:var(--blue)}
+  .toggle span{font-size:10px; letter-spacing:0.06em; text-transform:uppercase}
+
+  /* ---------- export ---------- */
+  #export{padding:12px 16px 16px; margin-top:auto}
+  #name{
+    width:100%; border:none; border-bottom:var(--rule); padding:4px 0 5px;
+    font-family:inherit; font-size:11px; letter-spacing:0.06em;
+    background:transparent; margin-bottom:10px; border-radius:0;
+  }
+  #name:focus{outline:none; border-bottom-color:var(--blue); color:var(--blue)}
+  button{
+    width:100%; padding:11px; border:none; border-radius:0; cursor:pointer;
+    background:var(--blue); color:var(--white);
+    font-family:inherit; font-size:10px; font-weight:700;
+    letter-spacing:0.18em; text-transform:uppercase;
+  }
+  button:hover{background:var(--black)}
+  button:disabled{background:#ccc; cursor:default}
+  #hint{margin-top:7px; font-size:9px; letter-spacing:0.04em; line-height:1.5}
+
+  /* ---------- viewport ---------- */
+  #stage{position:relative; overflow:hidden}
+  #canvas{display:block; width:100%; height:100%}
+
+  #readout{
+    position:absolute; top:0; left:0; right:0;
+    border-bottom:var(--rule); background:var(--white);
+    display:grid; grid-template-columns:repeat(5,1fr);
+  }
+  #readout div{padding:9px 12px; border-right:var(--hair)}
+  #readout div:last-child{border-right:none}
+  #readout dt{font-size:8px; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:3px}
+  #readout dd{font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--blue)}
+
+  #status{
+    position:absolute; left:0; bottom:0; right:0;
+    border-top:var(--rule); background:var(--white);
+    padding:7px 12px; font-size:9px; letter-spacing:0.12em; text-transform:uppercase;
+    display:flex; justify-content:space-between;
+  }
+  #err{color:var(--blue); font-weight:700}
+  .busy{animation:blink 0.7s steps(2,start) infinite}
+  @keyframes blink{to{opacity:0.25}}
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <div id="brand"><h1>Boxlab</h1><span>Parametric</span></div>
+
+  <div class="group">
+    <h2>Envelope</h2>
+    <div id="g-envelope"></div>
+  </div>
+
+  <div class="group">
+    <h2>Material</h2>
+    <div id="g-material"></div>
+  </div>
+
+  <div class="group">
+    <h2>Grid</h2>
+    <div id="g-grid"></div>
+  </div>
+
+  <div class="group">
+    <h2>Lid</h2>
+    <label class="toggle" style="margin-bottom:11px">
+      <input type="checkbox" id="lid" checked><span class="box"></span><span>Include lid</span>
+    </label>
+    <div id="g-lid"></div>
+  </div>
+
+  <div id="export">
+    <input id="name" value="tray" spellcheck="false" placeholder="filename">
+    <button id="go">Export files</button>
+    <div id="hint">ZIP: STEP + STL + 3MF per part, parameters, script.</div>
+  </div>
+</div>
+
+<div id="stage">
+  <dl id="readout">
+    <div><dt>Tray</dt><dd id="r-tray">—</dd></div>
+    <div><dt>Cell</dt><dd id="r-cell">—</dd></div>
+    <div><dt>Cells</dt><dd id="r-cells">—</dd></div>
+    <div><dt>Volume</dt><dd id="r-vol">—</dd></div>
+    <div><dt>Walls</dt><dd id="r-per">—</dd></div>
+  </dl>
+  <canvas id="canvas"></canvas>
+  <div id="status"><span id="msg">Loading kernel…</span><span id="err"></span></div>
+</div>
+
+<script type="importmap">
+{"imports":{
+  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+
+/* ---------- control definitions: [key, label, min, max, step, group] ---------- */
+const CONTROLS = [
+  ['length','Length',30,300,1,'g-envelope'],
+  ['width','Width',30,250,1,'g-envelope'],
+  ['height','Height',10,150,1,'g-envelope'],
+  ['corner','Corner radius',0,20,0.5,'g-envelope'],
+
+  ['wall','Wall',0.8,6,0.4,'g-material'],
+  ['floor','Floor',0.6,6,0.2,'g-material'],
+
+  ['cols','Columns',1,10,1,'g-grid'],
+  ['rows','Rows',1,10,1,'g-grid'],
+  ['divider','Divider thickness',0.8,4,0.4,'g-grid'],
+  ['divider_drop','Divider drop',0,40,0.5,'g-grid'],
+
+  ['lid_thickness','Plate',0.8,6,0.2,'g-lid'],
+  ['lip_height','Lip depth',1,20,0.5,'g-lid'],
+  ['lip_wall','Lip wall',0.8,4,0.4,'g-lid'],
+  ['clearance','Clearance / face',0,0.8,0.05,'g-lid'],
+];
+
+const els = {};
+const state = {};
+
+const msg = document.getElementById('msg');
+const errEl = document.getElementById('err');
+
+/* ---------- build the panel ---------- */
+async function boot(){
+  const defaults = await (await fetch('/defaults')).json();
+  for (const [key,label,min,max,step,group] of CONTROLS){
+    const wrap = document.createElement('div');
+    wrap.className = 'ctl';
+    wrap.innerHTML =
+      `<div class="row"><label for="c-${key}">${label}</label><output id="o-${key}"></output></div>
+       <input type="range" id="c-${key}" min="${min}" max="${max}" step="${step}">`;
+    document.getElementById(group).appendChild(wrap);
+    const input = wrap.querySelector('input');
+    input.value = defaults[key];
+    state[key] = defaults[key];
+    els[key] = { input, out: wrap.querySelector('output'), step };
+    paintValue(key);
+    input.addEventListener('input', () => {
+      state[key] = parseFloat(input.value);
+      paintValue(key);
+      schedule();
+    });
+  }
+  state.lid = defaults.lid;
+  const lidBox = document.getElementById('lid');
+  lidBox.checked = defaults.lid;
+  lidBox.addEventListener('change', () => { state.lid = lidBox.checked; schedule(); });
+  rebuild();
+}
+
+function paintValue(key){
+  const { input, out, step } = els[key];
+  const v = parseFloat(input.value);
+  out.textContent = Number.isInteger(step) ? v : v.toFixed(step < 0.1 ? 2 : 1);
+}
+
+/* ---------- three.js ---------- */
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff);
+
+const camera = new THREE.PerspectiveCamera(38, 1, 1, 5000);
+camera.position.set(220,-260,190);
+camera.up.set(0,0,1);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbbb, 2.1));
+const key = new THREE.DirectionalLight(0xffffff, 2.0);
+key.position.set(1,-1.4,2); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.7);
+fill.position.set(-1.2,0.8,0.4); scene.add(fill);
+
+const material = new THREE.MeshStandardMaterial({
+  color:0x0000ff, metalness:0.0, roughness:0.62, flatShading:false
+});
+const edgeMat = new THREE.LineBasicMaterial({ color:0x000000 });
+
+let mesh = null, edges = null;
+const loader = new STLLoader();
+
+function resize(){
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== w || canvas.height !== h){
+    renderer.setSize(w,h,false);
+    camera.aspect = w/h; camera.updateProjectionMatrix();
+  }
+}
+function tick(){ resize(); controls.update(); renderer.render(scene,camera); requestAnimationFrame(tick); }
+tick();
+
+function show(buffer, firstLoad){
+  const geo = loader.parse(buffer);
+  geo.computeVertexNormals();
+  geo.computeBoundingBox();
+  const c = new THREE.Vector3();
+  geo.boundingBox.getCenter(c);
+  geo.translate(-c.x,-c.y,-c.z);       // orbit around the part
+
+  if (mesh){ scene.remove(mesh); mesh.geometry.dispose(); }
+  if (edges){ scene.remove(edges); edges.geometry.dispose(); }
+
+  mesh = new THREE.Mesh(geo, material);
+  scene.add(mesh);
+  edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 24), edgeMat);
+  scene.add(edges);
+
+  if (firstLoad){
+    const s = geo.boundingBox.getSize(new THREE.Vector3()).length();
+    camera.position.set(s*0.75,-s*0.85,s*0.62);
+    controls.target.set(0,0,0);
+  }
+}
+
+/* ---------- request cycle ---------- */
+let pending = null, inFlight = false, first = true;
+
+function schedule(){
+  clearTimeout(pending);
+  pending = setTimeout(rebuild, 160);       // debounce the slider drag
+}
+
+async function rebuild(){
+  if (inFlight){ schedule(); return; }
+  inFlight = true;
+  msg.textContent = 'Building';
+  msg.classList.add('busy');
+  try{
+    const res = await fetch('/preview.stl?' + new URLSearchParams(state));
+    if (!res.ok){
+      const j = await res.json();
+      errEl.textContent = j.errors.join(' / ');
+      msg.textContent = 'Invalid parameters';
+      msg.classList.remove('busy');
+      inFlight = false; return;
+    }
+    errEl.textContent = '';
+    const stats = JSON.parse(res.headers.get('X-Stats'));
+    const buf = await res.arrayBuffer();
+    show(buf, first); first = false;
+    paintStats(stats);
+    msg.textContent = 'Ready';
+  }catch(e){
+    errEl.textContent = 'Server unreachable';
+    msg.textContent = 'Error';
+  }
+  msg.classList.remove('busy');
+  inFlight = false;
+}
+
+function paintStats(s){
+  const d = s.derived, b = s.tray.bbox;
+  document.getElementById('r-tray').textContent  = `${b[0]}×${b[1]}×${b[2]}`;
+  document.getElementById('r-cell').textContent  = `${d.cell[0]}×${d.cell[1]}×${d.cell[2]}`;
+  document.getElementById('r-cells').textContent = d.cells;
+  const vol = s.tray.volume + (s.lid ? s.lid.volume : 0);
+  document.getElementById('r-vol').textContent   = `${vol.toFixed(1)} cm³`;
+  document.getElementById('r-per').textContent   = `${d.perimeters}×`;
+}
+
+/* ---------- export ---------- */
+document.getElementById('go').addEventListener('click', () => {
+  const name = document.getElementById('name').value || 'tray';
+  const q = new URLSearchParams({ ...state, name });
+  window.location = '/export?' + q;
+});
+
+boot();
+</script>
+</body>
+</html>
